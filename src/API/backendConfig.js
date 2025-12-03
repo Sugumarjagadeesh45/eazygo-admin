@@ -12,6 +12,7 @@ const backendConfig = {
     updateOrder: "/api/orders/admin/orders/update",
   },
   
+  
   getHeaders: (token = null) => {
     // Try to get token from localStorage if not provided
     const authToken = token || localStorage.getItem('adminToken');
