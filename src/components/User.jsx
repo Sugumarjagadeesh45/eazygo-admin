@@ -242,6 +242,8 @@ function User() {
         throw new Error('Failed to delete user');
       }
 
+      
+
       const data = await response.json();
       
       if (data) {
