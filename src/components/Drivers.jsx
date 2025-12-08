@@ -350,7 +350,7 @@ function Drivers() {
     const token = getAuthToken();
     if (!token) return;
 
-    // Create a simple object without files
+    // ✅ ADD minWalletAmount to the data being sent
     const driverData = {
       name: newDriver.name,
       phone: newDriver.phone,
@@ -359,7 +359,8 @@ function Drivers() {
       aadharNumber: newDriver.aadharNumber,
       vehicleType: newDriver.vehicleType,
       email: newDriver.email || '',
-      dob: newDriver.dob || null
+      dob: newDriver.dob || null,
+      wallet: newDriver.minWalletAmount || 0 // ✅ ADD THIS LINE
     };
 
     console.log('📤 Sending JSON data:', driverData);
@@ -394,7 +395,7 @@ function Drivers() {
         ifscCode: '',
         bankAccountNumber: '',
         workingHours: '12',
-        minWalletAmount: '',
+        minWalletAmount: '', // Reset to empty
         licenseFiles: [],
         aadhaarFiles: [],
         panFiles: [],
