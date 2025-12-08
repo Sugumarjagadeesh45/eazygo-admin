@@ -104,49 +104,53 @@ function Drivers() {
   };
 
   const fetchDrivers = async (page = 1) => {
-    try {
-      setLoading(true);
-      const token = getAuthToken();
-      if (!token) return;
+  try {
+    setLoading(true);
+    const token = getAuthToken();
+    if (!token) return;
 
-      const response = await fetch(`http://localhost:5001/api/admin/drivers`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.clear();
-          navigate("/");
-          return;
-        }
-        throw new Error('Failed to fetch drivers');
+    // ✅ USE THE DIRECT ENDPOINT
+    const response = await fetch(`http://localhost:5001/api/admin/drivers`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
       }
+    });
 
-      const data = await response.json();
-      if (data.success) {
-        // Handle pagination on frontend if backend doesn't support it
-        const allDrivers = data.data || [];
-        const startIndex = (page - 1) * driversPerPage;
-        const endIndex = startIndex + driversPerPage;
-        
-        setDrivers(allDrivers);
-        setTotalPages(Math.ceil(allDrivers.length / driversPerPage));
-      } else {
-        throw new Error(data.message || 'Failed to fetch drivers');
+    if (!response.ok) {
+      if (response.status === 401) {
+        localStorage.clear();
+        navigate("/");
+        return;
       }
-    } catch (error) {
-      console.error('Error fetching drivers:', error);
-      showNotification('Failed to load drivers: ' + error.message, 'error');
-      setDrivers([]);
-      setTotalPages(1);
-    } finally {
-      setLoading(false);
+      throw new Error('Failed to fetch drivers');
     }
-  };
+
+    const data = await response.json();
+    
+    // ✅ FIX: Check for success flag
+    if (data.success) {
+      // Handle pagination on frontend if backend doesn't support it
+      const allDrivers = data.data || [];
+      const startIndex = (page - 1) * driversPerPage;
+      const endIndex = startIndex + driversPerPage;
+      
+      setDrivers(allDrivers);
+      setTotalPages(Math.ceil(allDrivers.length / driversPerPage));
+    } else {
+      throw new Error(data.message || 'Failed to fetch drivers');
+    }
+  } catch (error) {
+    console.error('Error fetching drivers:', error);
+    showNotification('Failed to load drivers: ' + error.message, 'error');
+    setDrivers([]);
+    setTotalPages(1);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   useEffect(() => {
     fetchDrivers(currentPage);
@@ -157,32 +161,35 @@ function Drivers() {
     navigate("/");
   };
 
-  // Toggle driver status function
+
   const toggleDriverStatus = async (id, currentStatus) => {
-    try {
-      const token = getAuthToken();
-      if (!token) return;
+  try {
+    const token = getAuthToken();
+    if (!token) return;
 
-      const response = await fetch(`http://localhost:5001/api/admin/driver/${id}/toggle`, {
-        method: 'PUT',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        fetchDrivers(currentPage);
-        showNotification(`Driver is now ${currentStatus === 'Live' ? 'Offline' : 'Online'}`, 'success');
-      } else {
-        showNotification(result.message || 'Failed to update status', 'error');
+    // ✅ USE THE DIRECT ENDPOINT
+    const response = await fetch(`http://localhost:5001/api/admin/driver/${id}/toggle`, {
+      method: 'PUT',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
       }
-    } catch (err) {
-      console.error('Error toggling driver status:', err);
-      showNotification('Failed to update status', 'error');
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      fetchDrivers(currentPage);
+      showNotification(`Driver is now ${result.data.status}`, 'success');
+    } else {
+      showNotification(result.message || 'Failed to update status', 'error');
     }
-  };
+  } catch (err) {
+    console.error('Error toggling driver status:', err);
+    showNotification('Failed to update status', 'error');
+  }
+};
+
+
 
   // Helper functions for input formatting
   const formatPhoneNumber = (value) => {
@@ -333,6 +340,7 @@ function Drivers() {
   };
 
 
+
   const handleAddDriver = async (e) => {
   e.preventDefault();
   if (!validateForm()) return;
@@ -342,64 +350,27 @@ function Drivers() {
     const token = getAuthToken();
     if (!token) return;
 
-    // Create FormData
-    const formData = new FormData();
-    
-    // Add all text fields
-    const textFields = [
-      'name', 'phone', 'email', 'dob', 'vehicleType', 'vehicleNumber',
-      'licenseNumber', 'aadharNumber', 'panNumber', 'ifscCode', 
-      'bankAccountNumber', 'workingHours', 'minWalletAmount'
-    ];
-    
-    textFields.forEach(field => {
-      if (newDriver[field] !== undefined && newDriver[field] !== null) {
-        formData.append(field, newDriver[field]);
-      }
-    });
-    
-    // Add files
-    newDriver.licenseFiles.forEach((file) => {
-      formData.append('licenseFiles', file);
-    });
-    
-    newDriver.aadhaarFiles.forEach((file) => {
-      formData.append('aadhaarFiles', file);
-    });
-    
-    if (newDriver.panFiles.length > 0) {
-      newDriver.panFiles.forEach((file) => {
-        formData.append('panFiles', file);
-      });
-    }
-    
-    newDriver.rcFiles.forEach((file) => {
-      formData.append('rcFiles', file);
-    });
-    
-    if (newDriver.bankFile) {
-      formData.append('bankFile', newDriver.bankFile);
-    }
-
-    console.log('📤 Sending FormData with:', {
+    // Create a simple object without files
+    const driverData = {
       name: newDriver.name,
       phone: newDriver.phone,
       vehicleNumber: newDriver.vehicleNumber,
       licenseNumber: newDriver.licenseNumber,
-      files: {
-        license: newDriver.licenseFiles.length,
-        aadhaar: newDriver.aadhaarFiles.length,
-        rc: newDriver.rcFiles.length
-      }
-    });
+      aadharNumber: newDriver.aadharNumber,
+      vehicleType: newDriver.vehicleType,
+      email: newDriver.email || '',
+      dob: newDriver.dob || null
+    };
 
-    const response = await fetch('http://localhost:5001/api/admin/drivers/create', {
+    console.log('📤 Sending JSON data:', driverData);
+    
+    const response = await fetch('http://localhost:5001/api/drivers/create-simple', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`
-        // Don't set Content-Type when sending FormData, let the browser set it with the boundary
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
       },
-      body: formData
+      body: JSON.stringify(driverData)
     });
 
     const result = await response.json();
@@ -434,7 +405,6 @@ function Drivers() {
       // Refresh the drivers list
       await fetchDrivers(currentPage);
     } else {
-      // Extract error message safely
       const errorMessage = result.message || result.error || 'Failed to add driver';
       showNotification(errorMessage, 'error');
     }
@@ -455,20 +425,31 @@ const updateDriverWallet = async (driverId, amount) => {
     const token = getAuthToken();
     if (!token) return;
 
-    console.log(`💰 Sending wallet update request for driver: ${driverId} with amount: ${amount}`);
+    // Convert amount to number and remove leading zeros
+    const numericAmount = Number(amount);
+    
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      showNotification('Please enter a valid amount greater than 0', 'error');
+      setWalletSaving(false);
+      return;
+    }
 
-    const response = await fetch(`http://localhost:5001/api/admin/driver/${driverId}/wallet`, {
+    console.log(`💰 Sending wallet update for driver: ${driverId} with amount: ${numericAmount}`);
+
+    // ✅ USE THE DIRECT ENDPOINT
+    const response = await fetch(`http://localhost:5001/api/admin/direct-wallet/${driverId}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ amount })
+      body: JSON.stringify({ amount: numericAmount })
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`❌ Wallet update failed with status ${response.status}:`, errorText);
+      
       throw new Error(`Failed to update wallet: ${response.status}`);
     }
 
@@ -476,7 +457,7 @@ const updateDriverWallet = async (driverId, amount) => {
     console.log('Wallet update response:', result);
 
     if (result.success) {
-      // Update the selected driver's wallet in the state
+      // Update the selected driver's wallet
       setSelectedDriver(prev => ({
         ...prev,
         wallet: result.data.wallet
@@ -489,9 +470,8 @@ const updateDriverWallet = async (driverId, amount) => {
           : driver
       ));
       
-      // Show a more informative notification
       showNotification(
-        `Wallet updated successfully! Added ${formatCurrency(result.data.addedAmount)} to wallet. New balance: ${formatCurrency(result.data.wallet)}`, 
+        `Wallet updated successfully! Added ${formatCurrency(result.data.addedAmount)}. New balance: ${formatCurrency(result.data.wallet)}`, 
         'success'
       );
       
@@ -502,11 +482,12 @@ const updateDriverWallet = async (driverId, amount) => {
     }
   } catch (err) {
     console.error('Error updating wallet:', err);
-    showNotification('Failed to update wallet', 'error');
+    showNotification(err.message || 'Failed to update wallet', 'error');
   } finally {
     setWalletSaving(false);
   }
 };
+
 
 
 
